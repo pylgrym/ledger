@@ -1,0 +1,6 @@
+## Interface: 11302
+## Title: _LedgerTitle
+
+## SavedVariables: lootMap
+
+src.lua
