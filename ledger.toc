@@ -3,4 +3,6 @@
 
 ## SavedVariables: lootMap
 
+util.lua
+lootState.lua
 src.lua
