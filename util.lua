@@ -62,24 +62,26 @@ end
 
 
 
-local function GetLootId_forSlot( slot )
+function GetLootId_forLootSlot( slot )
+  --print('B')
   local idNumber = 0
 
   local link = GetLootSlotLink( slot )
+  --print('C')
   if link then
     local _, idCode = string.match(link, "^|(%x+)|Hitem:(%d+):.*")
     idNumber = tonumber( idCode or 0 )
     if idNumber == 0 then
       local printable = gsub(link, "\124", "\124\124");
       print('cant parse ', printable)
-      local a = GetItemInfo(link)
-      print('after loop')
+      --local a = GetItemInfo(link) -- what was that for?
+      --print('after G-I-I', a)
     end
-    print('after idn-zero test')
+    --print('after idn-zero test')
   else 
     print('link broken for slot', slot)
   end
-  print('after link test')
+  --print('after link test')
 
   return idNumber, link
 end  

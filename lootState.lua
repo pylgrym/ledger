@@ -2,18 +2,11 @@
 
 lootMap = {} -- not local.
 
-function recordKill() 
+function recordKill(corpseId, corpseName) 
   print('recordKill', corpseId) --, ', ', latestCombatMob, '.')
-  --local inf = (lootMap[corpseId] and lootMap[corpseId] or {killCount=0, drops={})
   if corpseId == nil then
-    if false then --latestCombatMob then
-      print("(record-kill NOC) - latestCombatMob instead: ", latestCombatMob)
-      corpseId = latestCombatMob
-      latestCombatMob = nil
-    else
-      print("no-corpse in record-kill, and no LCM :-/")
-      return
-    end 
+    print("no-corpse in record-kill, and no LCM :-/")
+    return
   end
 
   if not lootMap[corpseId] then   
@@ -28,7 +21,7 @@ function recordKill()
 
   if state == "02_TARGET_CORPSE" then
     state = "03_LOOT_STARTED"
-    lootCount = numItems -- maybe check if it was zero before?
+    --lootCount = numItems -- maybe check if it was zero before?
     print("state 02->", state, "lootCount set to ", lootCount)
   end
 
@@ -40,11 +33,12 @@ function recordKill()
   end
 
   for slot = 1, numItems, 1 do
-    print('slot', slot, 'of', numItems)
     local texture, iName, quantity, quality = GetLootSlotInfo( slot )
-    -- hmm, quality should be 'islocked'
+    print('slot', slot, 'of', numItems) --,',', iName, quantity,quality,texture)
+    -- hmm, quality should be 'islocked'. also, quality may be nil.
 
-    local itemID, link = GetLootId( slot )
+    --print('A')
+    local itemID, link = GetLootId_forLootSlot( slot )
     print("slot:",slot,
       ", tex:",texture,
       ", iname:",iName,
@@ -68,10 +62,10 @@ function recordKill()
   print('after-loop')
   lootMap[corpseId] = inf -- shouldnt be necessary?
 
-  printMobInf(inf,corpseId) --mobInf, mobId)
-
-  corpseId = nil -- avoid counting a kill more than once.
-  corpseName="<?>"
+  printMobInf(inf,corpseId) 
+  -- NB! corpseId +corpseName must be cleared after this 
+  -- (so we can never loot the same mob multiple times.)
+  return (numItems>0)
 end
 
 

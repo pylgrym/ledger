@@ -10,3 +10,12 @@
   -- Also - does gray-mob-level switch between CMCXG and PARTY_KILL?
 --end 
 --function handlers:CHAT_MSG_COMBAT_HOSTILE_DEATH(...) showArgs("CMCHD",...) end 
+
+
+  --local inf = (lootMap[corpseId] and lootMap[corpseId] or {killCount=0, drops={})
+
+    if false then --latestCombatMob then
+      print("(record-kill NOC) - latestCombatMob instead: ", latestCombatMob)
+      corpseId = latestCombatMob
+      latestCombatMob = nil
+    else
