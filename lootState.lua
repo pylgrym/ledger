@@ -28,38 +28,59 @@ function recordKill(corpseId, corpseName)
   if numItems == 0 then
     local dropName = "nothing"
     local amount = 1 -- one serving of 'nothing'
-    local itemID = 0
-    logItem(inf, dropName, amount, itemID) -- danger - pass-by-value?
+    local itemId = 0
+    logItem(inf, dropName, amount, itemId) -- danger - pass-by-value?
   end
 
+  -- jeg har forpladret denne løkke, den bør ryddes op igen.
   for slot = 1, numItems, 1 do
     local texture, iName, quantity, quality = GetLootSlotInfo( slot )
-    print('slot', slot, 'of', numItems) --,',', iName, quantity,quality,texture)
+    --print('slot', slot, 'of', numItems) --,',', iName, quantity,quality,texture)
     -- hmm, quality should be 'islocked'. also, quality may be nil.
 
     --print('A')
-    local itemID, link = GetLootId_forLootSlot( slot )
-    print("slot:",slot,
+    local itemId, link = GetLootId_forLootSlot( slot )
+    local dropName = iName
+
+    if not inf.drops[dropName] then
+      inf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
+    end
+    local item = inf.drops[dropName]
+
+    local price = 0
+    if not (item.price>0) then -- (As long as price isn't set yet, keep trying to look it up.)
+      price = getItemPrice(itemId)
+      if price then   
+        item.price = price
+      end
+    else
+      price = item.price
+    end
+
+    print("slot:",slot .. "/" .. numItems,
       ", tex:",texture,
+      ", $:", price,
       ", iname:",iName,
-      ", qty:",quantity,
+      ", #",quantity,
       ", qa:", quality,
-      ", id:", itemID,
-      ", lnk:", link,
+      ", id:", itemId,
       ", for:", corpseId)
 
-    local dropName = iName
+    --  ", lnk:", link,
+
     local amount = 1
+
     local isMoney = not not string.match(dropName, "^%d")
-    print("isMoney", isMoney, dropName)
+    if isMoney then print("isMoney", isMoney, dropName) end
+
     if isMoney then     
       amount = stringToCurrency(dropName)
       dropName="money"
     end
 
-    logItem(inf, dropName, amount, itemID) -- danger - pass-by-value?
+    logItem(inf, dropName, amount, itemId, price, item) -- danger - pass-by-value?
   end
-  print('after-loop')
+  --print('after-loop')
   lootMap[corpseId] = inf -- shouldnt be necessary?
 
   printMobInf(inf,corpseId) 
@@ -69,21 +90,14 @@ function recordKill(corpseId, corpseName)
 end
 
 
-function logItem(inf, dropName, amount, itemId)
+function logItem(inf, dropName, amount, itemId, price, item)
   if not inf.drops[dropName] then
     inf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
   end
-  local item = inf.drops[dropName]
-  item.count = item.count + amount
 
-  print('itemPrice:', item.price, itemId, dropName)
-  if not (item.price>0) then -- (As long as price isn't set yet, keep trying to look it up.)
-    local price = getItemPrice(itemId)
-    if price then   
-      item.price = price
-    end
-  else
-    print('so ', item.price, 'is good enough')
+  item.count = item.count + amount
+  if price > 0 and not item.price > 0 then 
+    item.price = price
   end
 
   inf.drops[dropName] = item -- shouldn't be necessary?
@@ -108,6 +122,9 @@ function printLootMap()
   end
 end
 
+function round(a)
+  return math.floor(a*10+0.5)/10
+end
 
 function printMobInf(mobInf, mobId)
   local total=0
@@ -115,7 +132,9 @@ function printMobInf(mobInf, mobId)
     local contribution = (itemInfo.price*itemInfo.count)
     local sPrice = itemInfo.price*0.01
     total = total + contribution
-    print(":", mobId, mobInf.name, "#",itemInfo.count, "/", mobInf.killCount, "$"..sPrice, itemName)
+    local ratio = (itemInfo.count/mobInf.killCount)*100 -- now pct.
+    local pct = round(ratio)
+    print(": " .. pct .. "%", mobId, mobInf.name, "#",itemInfo.count, "/", mobInf.killCount, "$"..sPrice, itemName)
   end
   local totalAvg = total / mobInf.killCount
   print('totalAvg(s):', totalAvg*0.01)

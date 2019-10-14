@@ -38,6 +38,7 @@ function handlers:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 end 
 
+vbs = false -- verbose
 
 function handlers:PLAYER_TARGET_CHANGED(...) 
 	-- no payload.
@@ -51,7 +52,8 @@ function handlers:PLAYER_TARGET_CHANGED(...)
 	end
 
 	if targetname == nil then targetname = "<nil>" end
-	print("PlayerTargetChanged ", targetname)
+
+	if vbs then print("PlayerTargetChanged ", targetname) end	
 end 
 
 function forwardRecordKill() --corpseId, corpseName)
@@ -63,14 +65,14 @@ end
 function handlers:LOOT_OPENED(...) 
 	-- maybe this triggers when multiple sets?
 	local autoLoot = ...  -- arg1==AutoLootBool.
-	print("Loot-Opened, auto?", autoLoot)
+	if vbs then print("Loot-Opened, auto?", autoLoot) end
 	forwardRecordKill()
 end
 
 
 function handlers:LOOT_SLOT_CLEARED(...) 
 	local lootSlot = ... 	-- arg1: lootSlot.
-	print("LootSlot-Cleared, slot:", lootSlot) 
+	if vbs then print("LootSlot-Cleared, slot:", lootSlot) end
 end 
 
 
@@ -79,12 +81,12 @@ function handlers:LOOT_CLOSED(...)
 	--print("Loot-Closed")--showArgs("LootClosed",...) 
 	if mystate == "03_LOOT_STARTED" or mystate == "02_TARGET_CORPSE" then
 		mystate = "04_LOOT_ENDED"
-		print("Looted, any?".. droppedAnyLoot .. " for " .. corpseName," ", corpseId) 
+		print("Looted, any?", droppedAnyLoot, "for", corpseName," ", corpseId) 
 		if not droppedAnyLoot then
 			forwardRecordKill()
 		end 
 	else
-		print("(ignoring L-C)")
+		if vbs then print("(ignoring L-C)") end
 	end
 end 
 
