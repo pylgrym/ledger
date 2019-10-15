@@ -2,27 +2,35 @@
 
 lootMap = {} -- not local.
 
-function recordKill(corpseId, corpseName) 
-  print('recordKill', corpseId) --, ', ', latestCombatMob, '.')
-  if corpseId == nil then
+
+function updateMobKillCount(a_corpseId)
+  print('recordKill', a_corpseId) --, ', ', latestCombatMob, '.')
+  if a_corpseId == nil then
     print("no-corpse in record-kill, and no LCM :-/")
-    return
+    return nil
   end
 
-  if not lootMap[corpseId] then   
-    lootMap[corpseId] = {killCount=0, drops={}, name=corpseName}
+  if not lootMap[a_corpseId] then   
+    lootMap[a_corpseId] = {killCount=0, drops={}, name=corpseName, mobId = a_corpseId}
     print('creating mob with corpseName', corpseName)
   end
-  local inf = lootMap[corpseId]
-  inf.name = corpseName -- just to repair.
-  inf.killCount = inf.killCount+1
+  local mobInf = lootMap[a_corpseId]
+  --mobInf.name = corpseName -- just to repair, shouldn't be part of  normal working.
+  mobInf.killCount = mobInf.killCount+1
+  return mobInf
+end
+
+function recordKill(corpseId, corpseName) 
+-- NB! corpseId +corpseName must be cleared after this 
+-- (so we can never loot the same mob multiple times.)
+  local mobInf = updateMobKillCount(corpseId)
 
   local numItems = GetNumLootItems()
 
   if state == "02_TARGET_CORPSE" then
     state = "03_LOOT_STARTED"
     --lootCount = numItems -- maybe check if it was zero before?
-    print("state 02->", state, "lootCount set to ", lootCount)
+    print("state 02->", state) --, "lootCount set to ", lootCount)
   end
 
   if numItems == 0 then
@@ -34,16 +42,24 @@ function recordKill(corpseId, corpseName)
 
   -- jeg har forpladret denne løkke, den bør ryddes op igen.
   for slot = 1, numItems, 1 do
-    local texture, iName, quantity, quality = GetLootSlotInfo( slot )
-    --print('slot', slot, 'of', numItems) --,',', iName, quantity,quality,texture)
+    recordDroppedItem(slot, mobInf)
+  end
+  --print('after-loop')
+  lootMap[corpseId] = mobInf -- shouldnt be necessary?
+
+  printMobInf(mobInf,corpseId) 
+  return (numItems>0)
+end
+
+
+function recordDroppedItem(slot, mobInf)
+    local texture, dropName, quantity, quality = GetLootSlotInfo( slot )
     -- hmm, quality should be 'islocked'. also, quality may be nil.
 
-    --print('A')
     local itemId, link = GetLootId_forLootSlot( slot )
-    local dropName = iName
 
-    if not inf.drops[dropName] then
-      inf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
+    if not mobInf.drops[dropName] then
+      mobInf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
     end
     local item = inf.drops[dropName]
 
@@ -60,7 +76,7 @@ function recordKill(corpseId, corpseName)
     print("slot:",slot .. "/" .. numItems,
       ", tex:",texture,
       ", $:", price,
-      ", iname:",iName,
+      ", name:",dropName,
       ", #",quantity,
       ", qa:", quality,
       ", id:", itemId,
@@ -78,15 +94,7 @@ function recordKill(corpseId, corpseName)
       dropName="money"
     end
 
-    logItem(inf, dropName, amount, itemId, price, item) -- danger - pass-by-value?
-  end
-  --print('after-loop')
-  lootMap[corpseId] = inf -- shouldnt be necessary?
-
-  printMobInf(inf,corpseId) 
-  -- NB! corpseId +corpseName must be cleared after this 
-  -- (so we can never loot the same mob multiple times.)
-  return (numItems>0)
+    logItem(mobInf, dropName, amount, itemId, price, item) -- danger - pass-by-value?
 end
 
 
