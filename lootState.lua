@@ -86,15 +86,17 @@ function recordDroppedItem(slot, mobInf, numItems)
       ", id:", itemId,
       ", for:", corpseId)
 
-    --  ", lnk:", link,
+    -- fixme - hvis dropName har line breaks for money?
 
-    local amount = 1
+    local amount = quantity
 
-    local isMoney = not not string.match(dropName, "^%d")
-    if isMoney then print("isMoney", isMoney, dropName) end
+    local isMoney = not not string.match(dropName, "^%d.*")
 
-    if isMoney then     
+    if isMoney then 
+      print("isMoney", isMoney, dropName) 
       amount = stringToCurrency(dropName)
+      price=1
+      item.price=1
       dropName="money"
     end
 
