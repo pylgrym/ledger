@@ -23,9 +23,13 @@ end
 function recordKill(corpseId, corpseName) 
 -- NB! corpseId +corpseName must be cleared after this 
 -- (so we can never loot the same mob multiple times.)
-  local mobInf = updateMobKillCount(corpseId)
-
   local numItems = GetNumLootItems()
+
+  local mobInf = updateMobKillCount(corpseId)
+  if mobInf == nil then 
+    return (numItems>0)
+  end
+
 
   if state == "02_TARGET_CORPSE" then
     state = "03_LOOT_STARTED"
@@ -37,12 +41,12 @@ function recordKill(corpseId, corpseName)
     local dropName = "nothing"
     local amount = 1 -- one serving of 'nothing'
     local itemId = 0
-    logItem(inf, dropName, amount, itemId) -- danger - pass-by-value?
+    logItem(mobInf, dropName, amount, itemId, nil) -- danger - pass-by-value?
   end
 
   -- jeg har forpladret denne løkke, den bør ryddes op igen.
   for slot = 1, numItems, 1 do
-    recordDroppedItem(slot, mobInf)
+    recordDroppedItem(slot, mobInf, numItems)
   end
   --print('after-loop')
   lootMap[corpseId] = mobInf -- shouldnt be necessary?
@@ -52,7 +56,7 @@ function recordKill(corpseId, corpseName)
 end
 
 
-function recordDroppedItem(slot, mobInf)
+function recordDroppedItem(slot, mobInf, numItems)
     local texture, dropName, quantity, quality = GetLootSlotInfo( slot )
     -- hmm, quality should be 'islocked'. also, quality may be nil.
 
@@ -61,7 +65,7 @@ function recordDroppedItem(slot, mobInf)
     if not mobInf.drops[dropName] then
       mobInf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
     end
-    local item = inf.drops[dropName]
+    local item = mobInf.drops[dropName]
 
     local price = 0
     if not (item.price>0) then -- (As long as price isn't set yet, keep trying to look it up.)
@@ -102,9 +106,12 @@ function logItem(inf, dropName, amount, itemId, price, item)
   if not inf.drops[dropName] then
     inf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
   end
+  if item == nil then
+    item = inf.drops[dropName]
+  end 
 
   item.count = item.count + amount
-  if price > 0 and not item.price > 0 then 
+  if price ~= nil and (price > 0) and (item.price ~= nil and not (item.price > 0)) then 
     item.price = price
   end
 
