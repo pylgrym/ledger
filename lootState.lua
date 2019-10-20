@@ -3,8 +3,8 @@
 lootMap = {} -- not local.
 
 
-function updateMobKillCount(a_corpseId)
-  print('recordKill', a_corpseId) --, ', ', latestCombatMob, '.')
+function updateMobKillCount(a_corpseId, corpseName, numItems)
+  print('recordKill', a_corpseId, 'num-loots:', numItems) 
   if a_corpseId == nil then
     print("no-corpse in record-kill, and no LCM :-/")
     return nil
@@ -25,11 +25,10 @@ function recordKill(corpseId, corpseName)
 -- (so we can never loot the same mob multiple times.)
   local numItems = GetNumLootItems()
 
-  local mobInf = updateMobKillCount(corpseId)
+  local mobInf = updateMobKillCount(corpseId, corpseName, numItems)
   if mobInf == nil then 
     return (numItems>0)
   end
-
 
   if state == "02_TARGET_CORPSE" then
     state = "03_LOOT_STARTED"
@@ -46,7 +45,7 @@ function recordKill(corpseId, corpseName)
 
   -- jeg har forpladret denne løkke, den bør ryddes op igen.
   for slot = 1, numItems, 1 do
-    recordDroppedItem(slot, mobInf, numItems)
+    recordDroppedItem(slot, mobInf, numItems) --, dropName)
   end
   --print('after-loop')
   lootMap[corpseId] = mobInf -- shouldnt be necessary?
@@ -56,14 +55,15 @@ function recordKill(corpseId, corpseName)
 end
 
 
-function recordDroppedItem(slot, mobInf, numItems)
-    local texture, dropName, quantity, quality = GetLootSlotInfo( slot )
+function recordDroppedItem(slot, mobInf, numItems) --, dropName)
     -- hmm, quality should be 'islocked'. also, quality may be nil.
-
+    local texture, dropName, quantity, quality = GetLootSlotInfo( slot ) 
     local itemId, link = GetLootId_forLootSlot( slot )
 
+    dropName = dropName:gsub('\n','§')
+
     if not mobInf.drops[dropName] then
-      mobInf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
+      mobInf.drops[dropName] = {name=dropName, count=0, itemId=itemId, price=0}
     end
     local item = mobInf.drops[dropName]
 
@@ -104,12 +104,12 @@ function recordDroppedItem(slot, mobInf, numItems)
 end
 
 
-function logItem(inf, dropName, amount, itemId, price, item)
-  if not inf.drops[dropName] then
-    inf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
+function logItem(mobInf, dropName, amount, itemId, price, item)
+  if not mobInf.drops[dropName] then
+    mobInf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
   end
   if item == nil then
-    item = inf.drops[dropName]
+    item = mobInf.drops[dropName]
   end 
 
   item.count = item.count + amount
@@ -117,15 +117,15 @@ function logItem(inf, dropName, amount, itemId, price, item)
     item.price = price
   end
 
-  inf.drops[dropName] = item -- shouldn't be necessary?
-  return inf -- could this help?
+  mobInf.drops[dropName] = item -- shouldn't be necessary?
+  --return inf -- could this help?
 end
 
 
 
 function getItemPrice(itemId)
   local name, link, rarity, iLvl, iMinLvl, sType, sSubType, stack,loc,tx,price = GetItemInfo(itemId)
-  if price == nil then
+  if price == nil then -- does this really help?
     price=0
   end
   return price
@@ -137,10 +137,6 @@ function printLootMap()
   for mobId,mobInf in pairs(lootMap) do
     printMobInf(mobInf, mobId)
   end
-end
-
-function round(a)
-  return math.floor(a*10+0.5)/10
 end
 
 function printMobInf(mobInf, mobId)
@@ -157,3 +153,6 @@ function printMobInf(mobInf, mobId)
   print('totalAvg(s):', totalAvg*0.01)
 end
 
+function round(a)
+  return math.floor(a*10+0.5)/10
+end
