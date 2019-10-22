@@ -39,13 +39,11 @@ function recordKill(corpseId, corpseName)
   if numItems == 0 then
     local dropName = "nothing"
     local quantity = 1 -- one serving of 'nothing'
-    local itemId = 0
+    local itemId = -1 -- because money is 0..
     local noPrice = 0
-    local noItem = nil
-    logItem(mobInf, dropName, quantity, itemId, noPrice, noItem) 
+    logItem(mobInf, dropName, quantity, itemId, noPrice) 
   end
 
-  -- jeg har forpladret denne løkke, den bør ryddes op igen.
   for slot = 1, numItems, 1 do
     recordDroppedItem(slot, mobInf, numItems, corpseId)
   end
@@ -56,6 +54,25 @@ function recordKill(corpseId, corpseName)
   return (numItems>0)
 end
 
+function procureDropEntry(mobInf, dropName, itemId)
+    if not mobInf.drops[dropName] then
+      mobInf.drops[dropName] = {name=dropName, count=0, itemId=itemId, price=0}
+    end
+    return mobInf.drops[dropName]
+end
+
+function updateItemPrice(price, item)
+  if not (item.price>0) then -- (As long as price isn't set yet, keep trying to look it up.)
+    if price then   
+      item.price = price
+    end
+  else
+    if item.price>0 then
+      price = item.price
+    end
+  end
+  return price
+end
 
 function recordDroppedItem(slot, mobInf, numItems, corpseId_toPrint) 
     -- ### GET_ITEM_ID_AND_DROPNAME
@@ -63,13 +80,11 @@ function recordDroppedItem(slot, mobInf, numItems, corpseId_toPrint)
     local texture, dropName, quantity, quality = GetLootSlotInfo( slot ) 
     local itemId, link = GetLootId_forLootSlot( slot )
 
-    -- ### FIX_DROPNAME_LINEBREAKS
-    -- Hvis dropName har line breaks for money:
+    -- ### FIX_DROPNAME_LINEBREAKS    -- Hvis dropName har line breaks for money:
     dropName = dropName:gsub('\n','§')
     local showDropName = dropName -- saving it, because 'money' will replace it.
 
-    -- ### HANDLE_MONEY_SPECIALCASE AND_LOOKUP_PRICE
-    -- ### (requires dropname and itemId)
+    -- ### HANDLE_MONEY_SPECIALCASE AND_LOOKUP_PRICE    -- ### (requires dropname and itemId)
     local price = 0
     local isMoney = not not string.match(dropName, "^%d.*")
     if isMoney then 
@@ -81,61 +96,38 @@ function recordDroppedItem(slot, mobInf, numItems, corpseId_toPrint)
       price = getItemPrice(itemId)
     end
 
-    -- ### PROCURE_ITEM_DROPENTRY (requires dropname and itemId)
-    if not mobInf.drops[dropName] then
-      mobInf.drops[dropName] = {name=dropName, count=0, itemId=itemId, price=0}
-    end
-    local item = mobInf.drops[dropName]
-
-    -- ### REFRESH_ITEM_PRICE (requires dropEntry and price)
-    if not (item.price>0) then -- (As long as price isn't set yet, keep trying to look it up.)
-      if price then   
-        item.price = price
-      end
-    else
-      if item.price>0 then
-        price = item.price
-      end
-    end
+    -- ### update-drop-entry
+    local updPrice = logItem(mobInf, dropName, quantity, itemId, price)  
 
     -- ### DEBUG_INFO (requires all info gathered and available.)
     print( 
       slot .. "/" .. numItems,
       ",tex:",texture,
-      ",$:", price,
+      ",$:", updPrice,
       ",#", quantity,
       ",qa:", quality,
       ",id:", itemId,
       ",for:", corpseId_toPrint,
       ",name:",showDropName -- dropName
       )
-
-    -- ### update-drop-entry, is almost moot point by now, because of PROCURE and LOOKUP price.
-    -- pretty much only handles 'add-amount' atm.
-    logItem(mobInf, dropName, quantity, itemId, price, item)  
 end
 
 
-function logItem(mobInf, dropName, quantity, itemId, price, item)
-  -- ### (almost-)superflous "procure-drop-entry"
-  if not mobInf.drops[dropName] then
-    mobInf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
-  end
-  if item == nil then
-    item = mobInf.drops[dropName]
-  end 
+function logItem(mobInf, dropName, quantity, itemId, price)
+  -- ### PROCURE_ITEM_DROPENTRY (requires dropname and itemId)
+  local item = procureDropEntry(mobInf, dropName, itemId)
 
-  -- ### "real work":
+  -- ### REFRESH_ITEM_PRICE (requires item and price)
+  price = updateItemPrice(price, item)
+
   item.count = item.count + quantity
-
-  -- another superflous, refresh-price:
-  if price ~= nil and (price > 0) and (item.price == nil or item.price == 0) then 
-    item.price = price
-  end
-
   -- possibly necessary write-back, because of silly lua semantics (?)
   mobInf.drops[dropName] = item -- shouldn't be necessary?
+
+  return price -- ie 'updPrice'.
 end
+
+
 
 
 
