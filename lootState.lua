@@ -30,10 +30,10 @@ function recordKill(corpseId, corpseName)
     return (numItems>0)
   end
 
-  if state == "02_TARGET_CORPSE" then
-    state = "03_LOOT_STARTED"
+  if mystate == "02_TARGET_CORPSE" then
+    mystate = "03_LOOT_STARTED"
     --lootCount = numItems -- maybe check if it was zero before?
-    print("state 02->", state) --, "lootCount set to ", lootCount)
+    print("state 02->", mystate) --, "lootCount set to ", lootCount)
   end
 
   if numItems == 0 then
@@ -45,7 +45,7 @@ function recordKill(corpseId, corpseName)
 
   -- jeg har forpladret denne løkke, den bør ryddes op igen.
   for slot = 1, numItems, 1 do
-    recordDroppedItem(slot, mobInf, numItems) --, dropName)
+    recordDroppedItem(slot, mobInf, numItems, corpseId)
   end
   --print('after-loop')
   lootMap[corpseId] = mobInf -- shouldnt be necessary?
@@ -55,7 +55,7 @@ function recordKill(corpseId, corpseName)
 end
 
 
-function recordDroppedItem(slot, mobInf, numItems) --, dropName)
+function recordDroppedItem(slot, mobInf, numItems, corpseId) 
     -- hmm, quality should be 'islocked'. also, quality may be nil.
     local texture, dropName, quantity, quality = GetLootSlotInfo( slot ) 
     local itemId, link = GetLootId_forLootSlot( slot )
@@ -77,14 +77,16 @@ function recordDroppedItem(slot, mobInf, numItems) --, dropName)
       price = item.price
     end
 
-    print("slot:",slot .. "/" .. numItems,
-      ", tex:",texture,
-      ", $:", price,
-      ", name:",dropName,
-      ", #",quantity,
-      ", qa:", quality,
-      ", id:", itemId,
-      ", for:", corpseId)
+    print( -- "slot:",
+      slot .. "/" .. numItems,
+      ",tex:",texture,
+      ",$:", price,
+      ",#", quantity,
+      ",qa:", quality,
+      ",id:", itemId,
+      ",for:", corpseId,
+      ",name:",dropName
+      )
 
     -- fixme - hvis dropName har line breaks for money?
 

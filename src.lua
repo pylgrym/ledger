@@ -34,7 +34,7 @@ function handlers:COMBAT_LOG_EVENT_UNFILTERED(...)
 		local theCorpseGuid = dst_id
 		corpseId = findMobId(theCorpseGuid)
 		print("CLEU:",ts,e,hideCaster,src_id,sname,srcFlags,sraidf,dst_id,dname,dFlags,draidf)
-		print("state",mystate, "with corpseId", corpseId, "corpseName:",corpseName)
+		print("state:",mystate, "with corpseId", corpseId, "corpseName:",corpseName)
     end
 end 
 
@@ -48,7 +48,7 @@ function handlers:PLAYER_TARGET_CHANGED(...)
 		mystate = "02_TARGET_CORPSE"
 		droppedAnyLoot=false
 		corpseName2 = targetname
-		print("state 01->", state, "clearing droppedAnyLoot:", droppedAnyLoot, "corpseName2:", corpseName2)
+		print("state 01->", mystate, "clearing droppedAnyLoot:", droppedAnyLoot, "corpseName2:", corpseName2)
 	end
 
 	if targetname == nil then targetname = "<nil>" end
@@ -80,7 +80,9 @@ function handlers:LOOT_CLOSED(...)
 	-- no args.
 	--print("Loot-Closed")--showArgs("LootClosed",...) 
 	if mystate == "03_LOOT_STARTED" or mystate == "02_TARGET_CORPSE" then
+		print('state', mystate, "->", "04_LOOT_ENDED, at loot-closed.")
 		mystate = "04_LOOT_ENDED"
+		-- nb, these are empty if there WAS loot:
 		print("Looted, any?", droppedAnyLoot, "for", corpseName," ", corpseId) 
 		if not droppedAnyLoot then
 			forwardRecordKill()
