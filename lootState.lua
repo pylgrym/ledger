@@ -38,16 +38,18 @@ function recordKill(corpseId, corpseName)
 
   if numItems == 0 then
     local dropName = "nothing"
-    local amount = 1 -- one serving of 'nothing'
+    local quantity = 1 -- one serving of 'nothing'
     local itemId = 0
-    logItem(mobInf, dropName, amount, itemId, nil) -- danger - pass-by-value?
+    local noPrice = 0
+    local noItem = nil
+    logItem(mobInf, dropName, quantity, itemId, noPrice, noItem) 
   end
 
   -- jeg har forpladret denne løkke, den bør ryddes op igen.
   for slot = 1, numItems, 1 do
     recordDroppedItem(slot, mobInf, numItems, corpseId)
   end
-  --print('after-loop')
+
   lootMap[corpseId] = mobInf -- shouldnt be necessary?
 
   printMobInf(mobInf,corpseId) 
@@ -55,58 +57,67 @@ function recordKill(corpseId, corpseName)
 end
 
 
-function recordDroppedItem(slot, mobInf, numItems, corpseId) 
+function recordDroppedItem(slot, mobInf, numItems, corpseId_toPrint) 
+    -- ### GET_ITEM_ID_AND_DROPNAME
     -- hmm, quality should be 'islocked'. also, quality may be nil.
     local texture, dropName, quantity, quality = GetLootSlotInfo( slot ) 
     local itemId, link = GetLootId_forLootSlot( slot )
 
+    -- ### FIX_DROPNAME_LINEBREAKS
+    -- Hvis dropName har line breaks for money:
     dropName = dropName:gsub('\n','§')
+    local showDropName = dropName -- saving it, because 'money' will replace it.
 
+    -- ### HANDLE_MONEY_SPECIALCASE AND_LOOKUP_PRICE
+    -- ### (requires dropname and itemId)
+    local price = 0
+    local isMoney = not not string.match(dropName, "^%d.*")
+    if isMoney then 
+      print("isMoney", isMoney, dropName) 
+      quantity = stringToCurrency(dropName)
+      price = 1
+      dropName = "money"
+    else
+      price = getItemPrice(itemId)
+    end
+
+    -- ### PROCURE_ITEM_DROPENTRY (requires dropname and itemId)
     if not mobInf.drops[dropName] then
       mobInf.drops[dropName] = {name=dropName, count=0, itemId=itemId, price=0}
     end
     local item = mobInf.drops[dropName]
 
-    local price = 0
+    -- ### REFRESH_ITEM_PRICE (requires dropEntry and price)
     if not (item.price>0) then -- (As long as price isn't set yet, keep trying to look it up.)
-      price = getItemPrice(itemId)
       if price then   
         item.price = price
       end
     else
-      price = item.price
+      if item.price>0 then
+        price = item.price
+      end
     end
 
-    print( -- "slot:",
+    -- ### DEBUG_INFO (requires all info gathered and available.)
+    print( 
       slot .. "/" .. numItems,
       ",tex:",texture,
       ",$:", price,
       ",#", quantity,
       ",qa:", quality,
       ",id:", itemId,
-      ",for:", corpseId,
-      ",name:",dropName
+      ",for:", corpseId_toPrint,
+      ",name:",showDropName -- dropName
       )
 
-    -- fixme - hvis dropName har line breaks for money?
-
-    local amount = quantity
-
-    local isMoney = not not string.match(dropName, "^%d.*")
-
-    if isMoney then 
-      print("isMoney", isMoney, dropName) 
-      amount = stringToCurrency(dropName)
-      price=1
-      item.price=1
-      dropName="money"
-    end
-
-    logItem(mobInf, dropName, amount, itemId, price, item) -- danger - pass-by-value?
+    -- ### update-drop-entry, is almost moot point by now, because of PROCURE and LOOKUP price.
+    -- pretty much only handles 'add-amount' atm.
+    logItem(mobInf, dropName, quantity, itemId, price, item)  
 end
 
 
-function logItem(mobInf, dropName, amount, itemId, price, item)
+function logItem(mobInf, dropName, quantity, itemId, price, item)
+  -- ### (almost-)superflous "procure-drop-entry"
   if not mobInf.drops[dropName] then
     mobInf.drops[dropName] = {name=dropName, count=0, itemId = itemId, price=0}
   end
@@ -114,13 +125,16 @@ function logItem(mobInf, dropName, amount, itemId, price, item)
     item = mobInf.drops[dropName]
   end 
 
-  item.count = item.count + amount
-  if price ~= nil and (price > 0) and (item.price ~= nil and not (item.price > 0)) then 
+  -- ### "real work":
+  item.count = item.count + quantity
+
+  -- another superflous, refresh-price:
+  if price ~= nil and (price > 0) and (item.price == nil or item.price == 0) then 
     item.price = price
   end
 
+  -- possibly necessary write-back, because of silly lua semantics (?)
   mobInf.drops[dropName] = item -- shouldn't be necessary?
-  --return inf -- could this help?
 end
 
 

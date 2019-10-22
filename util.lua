@@ -67,6 +67,7 @@ function GetLootId_forLootSlot( slot )
   local idNumber = 0
 
   local link = GetLootSlotLink( slot )
+  -- seems this is nil for money?
   --print('C')
   if link then
     local _, idCode = string.match(link, "^|(%x+)|Hitem:(%d+):.*")
